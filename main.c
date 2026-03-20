@@ -1,14 +1,10 @@
-// 2026.3.19
+// 2026.3.20
 
 // 明天彻底完成v1.0版本(无数据库版本)
 
 /*
-    当前问题：在用户注册的时候应该先检查文件内是否有用户，
-    所以需要在最开始的时候先把文件读出来，以链表的形式存储，
-    之后在注册的时候，进行比较，如果注册用户没有，则正式注册，并且把用户数据按行写入文件内，
-    把当前用户添加到链表末尾，整个文件的排版是按照用户的注册顺序来的，
-    登录也是一样，需要先检查链表内是否有他，没有报错，有则登录。
-    主要问题函数：signup(), addUser(), 
+    已完成的功能：
+    管理员相关，关于我们，使用说明，注册，登录
 */
 
 #include <stdio.h>
@@ -25,31 +21,10 @@
 #define MAX_PASSWORD 30
 #define MAX_ONLYNUMBER 10
 
-void firstShow();// 欢迎界面
-void menu(LIST_DELIVERY* pListDelivery, LIST_USER* pListUser);// 菜单显示
-void signin();// 登录
-void signup(LIST_USER* pList);// 注册
-void quickGet();// 快速取件
-void readMeUsing();// 使用说明
-void aboutUs();// 关于我们
-void exitFirst();// 退出程序
-char handleButton1(char button1);// 处理大小写问题
-
-// 有关用户注册的函数
-void initUser(LIST_USER* pList);// 初始化链表
-void addUser(LIST_USER* pList, USER* Node);// 增加用户节点
-void deleteUser(LIST_USER* pList);// 删除用户节点
-
-// 有关快递的函数
-void initDelivery(LIST_DELIVERY* pList);// 初始化链表
-void addDelivery(LIST_DELIVERY* pList);// 增加快递节点
-void deleteDelivery(LIST_DELIVERY* pList);// 删除快递节点
-
 typedef struct _user {// 用户
     char name[MAX_NAME];// 用户名
     char password[MAX_PASSWORD];// 密码
     char onlyNumber[MAX_ONLYNUMBER];// 唯一6位校验码
-    int NumberDelivery;// 代取快递数量
     int issignup;// 是否为注册用户
     int isvip;// 是否为vip用户
     struct _user* prev;
@@ -65,7 +40,8 @@ typedef struct _admin {// 管理员
 
 typedef struct _delivery {// 快递
     char Did[MAX_ONLYNUMBER];// 唯一5位取件码
-    char userON[MAX_ONLYNUMBER];// 确定被哪位用户取走
+    char userON[MAX_ONLYNUMBER];// 确定被哪个唯一校验码取走
+    char userName[MAX_NAME];// 确定被哪位用户取走
     int status;// 是否被取走
     struct _delivery* prev;
     struct _delivery* next;
@@ -83,37 +59,255 @@ typedef struct {// 用户链表
     DELIVERY* head;// 头节点
 }LIST_DELIVERY;
 
+void firstShow();// 欢迎界面(1)
+void firstMenu(LIST_DELIVERY* pListDelivery, LIST_USER* pListUser, LIST_ADMIN* pListAdmin);// 欢迎菜单显示(1)
+void userMenu(LIST_DELIVERY* pListDelivery, LIST_USER* pListUser, LIST_ADMIN* pListAdmin);// 用户菜单显示(1)
+void adminMenu(LIST_DELIVERY* pListDelivery);// 管理员菜单显示(1)
+int signin(LIST_USER* pList);// 登录(1)
+void signup(LIST_USER* pList);// 注册(1)
+void quickGet();// 快速取件(0)
+void readMeUsing();// 使用说明(1)
+void aboutUs();// 关于我们(1)
+void exitFirst(LIST_USER* pListUser, LIST_DELIVERY* pListDelivery, LIST_ADMIN* pListAdmin);// 退出程序(1)
+int aboutAdmin(LIST_ADMIN* pList);// 管理员相关(1)
+char handleButton1(char button1);// 处理大小写问题(1)
+
+// 有关用户注册的函数(启动前)
+void initUser(LIST_USER* pList);// 初始化链表(1)
+USER* createUserNode(char* userName, char* passWord, char* onlyNumber, int isVip, int isSignup);// 创建用户节点(1)
+void addUser(LIST_USER* pList, USER* Node);// 增加用户节点(1)
+void deleteUser(LIST_USER* pList);// 删除用户节点(1)
+
+// 有关快递的函数(管理员操作)
+void initDelivery(LIST_DELIVERY* pList);// 初始化链表(1)
+DELIVERY* createDeliveryNode(char* Did, char* userON, char* userName, int status);// 创建快递节点(1)
+void addDelivery(LIST_DELIVERY* pList, DELIVERY* Node);// 增加快递节点(1)
+void deleteDelivery(LIST_DELIVERY* pList);// 删除快递节点(1)
+void removeDelivery(LIST_DELIVERY* pList, char* tempDid);// 取走快递节点(0)
+
+// 有关管理员(快递员)的函数
+int signinAdmin(LIST_ADMIN* pList);// 管理员登录(1)
+int signupAdmin(LIST_ADMIN* pList);// 管理员注册(1)
+void initAdmin(LIST_ADMIN* pList);// 初始化链表(1)
+ADMIN* createAdminNode(char* userName, char* passWord);// 创建管理员节点(1)
+void addAdmin(LIST_ADMIN* pList, ADMIN* Node);// 增加管理员节点(1)
+void deleteAdmin(LIST_ADMIN* pList);// 删除管理员节点(1)
+
+
+
 int main() {
     LIST_DELIVERY listDelivery;
     LIST_USER listUser;
+    LIST_ADMIN listAdmin;
     initDelivery(&listDelivery);
+    initAdmin(&listAdmin);
     initUser(&listUser);
     firstShow();
-    menu(&listDelivery, &listUser);
+    firstMenu(&listDelivery, &listUser, &listAdmin);
     
     return 0;
 }
 
-void addUser(LIST_USER* pList, USER* Node) {// 
-    int fd = open("user.txt", O_RDWR);
+int signinAdmin(LIST_ADMIN* pList) {
+    char tempAdminName[MAX_NAME];
+    char tempPassword[MAX_PASSWORD];
+    int canSignin = 0;
+    
+    printf("%s\\== 管理员登录界面 ==/%s\n", COLOR_WELCOME, COLOR_RESET);
+    printf("%s请输入管理员用户名:%s", COLOR_DISPLAY, COLOR_RESET);
+    scanf("%s", tempAdminName);
+    printf("%s请输入管理员密码:%s", COLOR_DISPLAY, COLOR_RESET);
+    scanf("%s", tempPassword);
+    tempPassword[MAX_PASSWORD - 1] = '\0';
+    for(ADMIN* tempNode = pList->head->next; tempNode; tempNode = tempNode->next) {
+        if(strcmp(tempNode->name, tempAdminName) == 0 && 
+           strcmp(tempNode->password, tempPassword) == 0) {
+            canSignin = 1;
+            break;
+        }
+    }
+    
+    if(canSignin) {
+        printf("%s管理员登录成功!%s\n", COLOR_WELCOME, COLOR_RESET);
+        return 1;
+    } else {
+        printf("%s用户名或密码错误!%s\n", COLOR_ERROR, COLOR_RESET);
+        return 0;
+    }
+}
+
+void deleteAdmin(LIST_ADMIN* pList) {
+    ADMIN* tempNode;
+    while(pList->head) {
+        tempNode = pList->head;
+        pList->head = pList->head->next;
+        free(tempNode);
+    }
+}
+
+void addAdmin(LIST_ADMIN* pList, ADMIN* Node) {
+    FILE* fd = fopen("admin.txt", "a");
+    ADMIN* tempNode = pList->head;
+    Node->prev = NULL;
+    Node->next = NULL;
+    if(pList->head->next == NULL) {// 检查头节点
+        pList->head->next = Node;
+        Node->prev = pList->head;
+    }else {// 头节点下有内容
+        for(tempNode = pList->head->next; tempNode; tempNode = tempNode->next) {
+            if(tempNode->next == NULL) {
+                tempNode->next = Node;
+                Node->prev = tempNode;
+                break;
+            }
+        }
+    }
+    // 写入文件
+    fprintf(fd, "%s|%s\n",Node->name, Node->password);
+    printf("%s管理员注册成功!%s\n", COLOR_DISPLAY, COLOR_RESET);
+    fclose(fd);
+    return;
+}
+
+ADMIN* createAdminNode(char* userName, char* passWord) {
+    ADMIN* adminNode = (ADMIN*)malloc(sizeof(ADMIN));
+    adminNode->prev = NULL;
+    adminNode->next = NULL;
+    strcpy(adminNode->name, userName);
+    strcpy(adminNode->password, passWord);
+    return adminNode;
+}
+
+void initAdmin(LIST_ADMIN* pList) {
+    FILE* fd = fopen("admin.txt", "r");
+    
+    pList->head = (ADMIN*)malloc(sizeof(ADMIN));
+    pList->head->prev = NULL;
+    pList->head->next = NULL;
+    
+    char line[100];
+    while (fgets(line, sizeof(line), fd) != NULL) {
+        // 移除换行符
+        line[strcspn(line, "\n")] = 0;
+        
+        // 分割行：用户名|密码
+        char* token = strtok(line, "|");
+        
+        char userName[MAX_NAME];
+        strcpy(userName, token);
+
+        token = strtok(NULL, "|");
+        
+        char passWord[MAX_PASSWORD];
+        // 注意：password可能包含换行符，需要处理
+        strcpy(passWord, token);
+
+        // 创建节点
+        ADMIN* Node = createAdminNode(userName, passWord);
+
+        // 插入链表尾部
+        ADMIN* tempNode = pList->head;
+        while(tempNode->next != NULL) {
+            tempNode = tempNode->next;
+        }
+        tempNode->next = Node;
+        Node->prev = tempNode;
+    }
+    fclose(fd);
+}
+
+/*
+    用来删除快递链表。
+*/
+
+void deleteDelivery(LIST_DELIVERY* pList) {
+    DELIVERY* tempNode;
+    while(pList->head) {
+        tempNode = pList->head;
+        pList->head = pList->head->next;
+        free(tempNode);
+    }
+}
+
+
+/*
+    用来删除用户链表。
+*/
+
+void deleteUser(LIST_USER* pList) {
+    USER* tempNode;
+    while(pList->head) {
+        tempNode = pList->head;
+        pList->head = pList->head->next;
+        free(tempNode);
+    }
+}
+
+/*
+    用来将快递信息写入文件内。
+    不仅仅把快递信息写入文件，
+    还需要把当前快递信息，
+    和程序所存在的链表连起来。
+*/
+
+void addDelivery(LIST_DELIVERY* pList, DELIVERY* Node) {
+    FILE* fd = fopen("delivery.txt", "a");
+    DELIVERY* tempNode = pList->head;
+    Node->prev = NULL;
+    Node->next = NULL;
+    Node->status = 0;
+    if(pList->head->next == NULL) {// 检查头节点
+        pList->head->next = Node;
+        Node->prev = pList->head;
+    }else {// 头节点下有内容
+        for(tempNode = pList->head->next; tempNode; tempNode = tempNode->next) {
+            if(tempNode->next == NULL) {
+                tempNode->next = Node;
+                Node->prev = tempNode;
+                break;
+            }
+        }
+    }
+    // 写入文件
+    fprintf(fd, "%s|%s|%s|%d\n",Node->Did, Node->userON, Node->userName, 
+                                        Node->status);
+    printf("%s快递注册成功!%s\n", COLOR_DISPLAY, COLOR_RESET);
+    fclose(fd);
+    return;
+}
+
+/*
+    用来将用户信息写入文件内。
+    不仅仅把用户信息写入文件，
+    还需要把当前用户信息，
+    和程序所存在的链表连起来。
+*/
+
+void addUser(LIST_USER* pList, USER* Node) {
+    FILE* fd = fopen("user.txt", "a");
+    USER* tempNode = pList->head;
     Node->prev = NULL;
     Node->next = NULL;
     Node->isvip = 0;
     Node->issignup = 1;
-    Node->NumberDelivery = 0;
     if(pList->head->next == NULL) {// 检查头节点
         pList->head->next = Node;
         Node->prev = pList->head;
-        printf("%s用户注册成功!%s\n", COLOR_DISPLAY, COLOR_RESET);
-        
-
-
-        return;
+    }else {// 头节点下有内容
+        for(tempNode = pList->head->next; tempNode; tempNode = tempNode->next) {
+            if(tempNode->next == NULL) {
+                tempNode->next = Node;
+                Node->prev = tempNode;
+                break;
+            }
+        }
     }
-
-    while(pList->head) {
-        
-    }
+    // 写入文件
+    fprintf(fd, "%s|%s|%s|%d|%d\n",Node->name, Node->password, Node->onlyNumber, 
+                                        Node->isvip, Node->issignup);
+    printf("%s用户注册成功!%s\n", COLOR_DISPLAY, COLOR_RESET);
+    fclose(fd);
+    return;
 }
 
 /*
@@ -123,9 +317,85 @@ void addUser(LIST_USER* pList, USER* Node) {//
 */
 
 void initUser(LIST_USER* pList) {
+    FILE* fd = fopen("user.txt", "r");
     pList->head = (USER*)malloc(sizeof(USER));
     pList->head->prev = NULL;
-    pList->head->prev = NULL;
+    pList->head->next = NULL;
+    char line[100];
+    while (fgets(line, sizeof(line), fd) != NULL) {
+        // 分割行：用户名|密码|唯一校验码|是否为vip用户|是否为已注册用户
+        char* token = strtok(line, "|");
+        char userName[MAX_NAME], passWord[MAX_PASSWORD], onlyNumber[MAX_ONLYNUMBER];
+        int isVip, isSignup;
+        strcpy(userName, token);
+
+        token = strtok(NULL, "|");
+        strcpy(passWord, token);
+
+        token = strtok(NULL, "|");
+        strcpy(onlyNumber, token);
+
+        token = strtok(NULL, "|");
+        isVip = atoi(token);
+
+        token = strtok(NULL, "|");
+        isSignup = atoi(token);
+
+
+        // 创建节点
+        USER* Node = createUserNode(userName, passWord, onlyNumber, isVip, isSignup);
+
+        // 插入链表尾部
+        if (pList->head->next == NULL) {
+            pList->head->next = Node;
+            Node->prev = pList->head;
+        } else {
+            for(USER* tempNode = pList->head->next; tempNode; tempNode = tempNode->next) {
+                if(tempNode->next == NULL) {
+                    tempNode->next = Node;
+                    Node->prev = tempNode;
+                }
+            }
+        }
+    }
+    fclose(fd);
+}
+
+/*
+    用来创建用户链表节点。
+    创建好的节点，
+    返回值即为当前节点。
+*/
+
+DELIVERY* createDeliveryNode(char* Did, char* userON, char* userName, int status) {
+    DELIVERY* deliveryNode = (DELIVERY*)malloc(sizeof(DELIVERY));
+    deliveryNode->prev = NULL;
+    deliveryNode->next = NULL;
+    strcpy(deliveryNode->Did, Did);
+    strcpy(deliveryNode->userON, userON);
+    strcpy(deliveryNode->userName, userName);
+    deliveryNode->status = status;
+
+    return deliveryNode;
+}
+
+/*
+    用来创建用户链表节点。
+    创建好的节点，
+    返回值即为当前节点。
+*/
+
+USER* createUserNode(char* userName, char* passWord, char* onlyNumber, int isVip, int isSignup) {
+    USER* userNode = (USER*)malloc(sizeof(USER));
+    userNode->prev = NULL;
+    userNode->next = NULL;
+    strcpy(userNode->name, userName);
+    strcpy(userNode->password, passWord);
+    strcpy(userNode->onlyNumber, onlyNumber);
+    userNode->isvip = isVip;
+    userNode->issignup = isSignup;
+
+    return userNode;
 }
 
 /*
@@ -135,9 +405,45 @@ void initUser(LIST_USER* pList) {
 */
 
 void initDelivery(LIST_DELIVERY* pList) {
+    FILE* fd = fopen("delivery.txt", "r");
     pList->head = (DELIVERY*)malloc(sizeof(DELIVERY));
     pList->head->prev = NULL;
     pList->head->next = NULL;
+    char line[100];
+    while (fgets(line, sizeof(line), fd) != NULL) {
+        // 分割行：唯一5位取件码|唯一校验码|用户名|是否被取走
+        char* token = strtok(line, "|");
+        char Did[MAX_ONLYNUMBER], userON[MAX_ONLYNUMBER], userName[MAX_NAME];
+        int status;
+        strcpy(Did, token);
+
+        token = strtok(NULL, "|");
+        strcpy(userON, token);
+
+        token = strtok(NULL, "|");
+        strcpy(userName, token);
+
+        token = strtok(NULL, "|");
+        status = atoi(token);
+
+
+        // 创建节点
+        DELIVERY* Node = createDeliveryNode(Did, userON, userName, status);
+
+        // 插入链表尾部
+        if (pList->head->next == NULL) {
+            pList->head->next = Node;
+            Node->prev = pList->head;
+        } else {
+            for(DELIVERY* tempNode = pList->head->next; tempNode; tempNode = tempNode->next) {
+                if(tempNode->next == NULL) {
+                    tempNode->next = Node;
+                    Node->prev = tempNode;
+                }
+            }
+        }
+    }
+    fclose(fd);
 }
 
 /*
@@ -190,6 +496,12 @@ void signup(LIST_USER* pList) {
         if(nameLen > 10) {
             printf("%s您输入的用户名过长!请重试...%s\n", COLOR_ERROR, COLOR_RESET);
         }else {
+            for(USER* tempNode = pList->head->next; tempNode; tempNode = tempNode->next) {
+                if(strcmp(tempNode->name, tempUserName) == 0) {
+                    printf("%s您输入的用户名已被注册过!请重试...%s\n", COLOR_ERROR, COLOR_RESET);
+                    return;
+                }
+            }
             strcpy(newUser->name, tempUserName);
             break;
         }
@@ -223,18 +535,18 @@ void signup(LIST_USER* pList) {
     }
 
     while(1) {// 校验码输入循环
-        printf("%s请输入您的唯一校验码:(最大支持6位)%s", COLOR_DISPLAY, COLOR_RESET);
+        printf("%s请输入您的唯一校验码:(6位)%s", COLOR_DISPLAY, COLOR_RESET);
         scanf("%s",tempOnlyNumber);
         tempOnlyNumber[MAX_ONLYNUMBER - 1] = '\0';
         onlyNumberLen = strlen(tempOnlyNumber);
-        if(onlyNumberLen > 6) {
-            printf("%s您输入的校验码过长!请重试...%s\n", COLOR_ERROR, COLOR_RESET);
+        if(onlyNumberLen != 6) {
+            printf("%s您输入的校验码不符合规定!请重试...%s\n", COLOR_ERROR, COLOR_RESET);
         }else {
             while(1) {
                 printf("%s请确认您的新校验码:%s", COLOR_DISPLAY, COLOR_RESET);
                 scanf("%s", istempOnlyNumber);
                 istempOnlyNumber[MAX_ONLYNUMBER - 1] = '\0';
-                if(strcmp(istempOnlyNumber, istempOnlyNumber) == 0) {
+                if(strcmp(tempOnlyNumber, istempOnlyNumber) == 0) {
                     printf("%s校验码确认成功!%s\n", COLOR_DISPLAY, COLOR_RESET);
                     isonRight = 1;
                     break;
@@ -243,6 +555,7 @@ void signup(LIST_USER* pList) {
                 }
             }
             if(isonRight) {
+                
                 strcpy(newUser->onlyNumber, tempOnlyNumber);
                 break;
             }
@@ -252,8 +565,40 @@ void signup(LIST_USER* pList) {
     addUser(pList, newUser);
 }
 
-void signin() {
-    printf("登录界面\n");
+/*
+    用来进行用户的登录。
+    创建两个暂存的数组，
+    用来将来与库内文件进行比较。
+    在一个for循环内进行检查，
+    如果确实匹配到了，则登陆成功，
+    否则要求用户重新输入。
+*/
+
+int signin(LIST_USER* pList) {
+    char tempUserName[MAX_NAME];// 用户名数组
+    char tempPassword[MAX_PASSWORD];// 密码数组
+    int canSignin = 0;
+    printf("%s\\== 欢迎来到登录界面 ==/%s\n", COLOR_WELCOME, COLOR_RESET);
+    printf("%s请输入您的用户名:(最大支持10位)%s", COLOR_DISPLAY, COLOR_RESET);
+    scanf("%s",tempUserName);
+    tempUserName[MAX_NAME - 1] = '\0';
+    printf("%s请输入您的密码:(最大支持25位)%s", COLOR_DISPLAY, COLOR_RESET);
+    scanf("%s",tempPassword);
+    tempPassword[MAX_PASSWORD - 1] = '\0';
+    for(USER* tempNode = pList->head->next; tempNode; tempNode = tempNode->next) {
+        if(strcmp(tempNode->name, tempUserName) == 0 && strcmp(tempNode->password, tempPassword) == 0) {
+            canSignin = 1;
+            break;
+        }
+    }
+
+    if(canSignin) {
+        printf("%s\\== 登陆成功! ==/%s\n", COLOR_WELCOME, COLOR_RESET);
+        return 1;
+    }else {
+        printf("%s您重新输入的用户名或密码有误!请重试...%s\n", COLOR_ERROR, COLOR_RESET);
+        return 0;
+    }
 }
 
 /*
@@ -261,7 +606,7 @@ void signin() {
     简单的询问以及switch。
 */
 
-void exitFirst() {
+void exitFirst(LIST_USER* pListUser, LIST_DELIVERY* pListDelivery, LIST_ADMIN* pListAdmin) {
     char button1;
     printf("您确定要退出吗? yes/no (y/n):");
     scanf(" %c", &button1);
@@ -269,6 +614,9 @@ void exitFirst() {
     switch (button1)
     {
     case 'y':
+        deleteUser(pListUser);
+        deleteDelivery(pListDelivery);
+        deleteAdmin(pListAdmin);
         exit(EXIT_SUCCESS);
         break;
 
@@ -345,8 +693,224 @@ char handleButton1(char button1) {
     return button1;
 }
 
+void removeDelivery(LIST_DELIVERY* pList, char* tempDid) {
+    FILE* fd = fopen("history.txt", "a");
+    DELIVERY* toRemove = NULL;
+    
+    for(DELIVERY* tempNode = pList->head->next; tempNode; tempNode = tempNode->next) {
+        if(strcmp(tempNode->Did, tempDid) == 0) {
+            toRemove = tempNode;
+            break;
+        }
+    }
+    
+    if(toRemove) {
+        toRemove->status = 1;
+        fprintf(fd, "[%s] 已被用户[%s]取走.\n", toRemove->Did, toRemove->userName);
+        
+        if(toRemove->prev) {
+            toRemove->prev->next = toRemove->next;
+        }
+        if(toRemove->next) {
+            toRemove->next->prev = toRemove->prev;
+        }
+        
+        free(toRemove);
+        fclose(fd);
+    } else {
+        printf("%s未找到该快递!%s\n", COLOR_ERROR, COLOR_RESET);
+    }
+}
+
+void userMenu(LIST_DELIVERY* pListDelivery, LIST_USER* pListUser, LIST_ADMIN* pListAdmin) {
+    printf("%s\\== 欢迎进入用户管理界面 ==/%s\n", COLOR_WELCOME, COLOR_RESET);
+    char button1;
+    char tempDid[MAX_ONLYNUMBER];
+    while(1) {
+        printf("%s\\==%s%sq%s %s取件 ==/%s\n", COLOR_WELCOME, COLOR_RESET, COLOR_DISPLAY, COLOR_RESET, COLOR_WELCOME, COLOR_RESET);
+        printf("%s\\==%s%sx%s %s退出 ==/%s\n", COLOR_WELCOME, COLOR_RESET, COLOR_DISPLAY, COLOR_RESET, COLOR_WELCOME, COLOR_RESET);
+        printf("%s请选择您要进行的操作:%s", COLOR_DISPLAY, COLOR_RESET);
+
+        scanf(" %c", &button1);
+        button1 = handleButton1(button1);// 处理用户大小写问题
+
+        switch (button1)
+        {
+        case 'q':
+            printf("%s请输入取件码:%s", COLOR_DISPLAY, COLOR_RESET);
+            scanf("%s", tempDid);
+            tempDid[MAX_ONLYNUMBER - 1] = '\0';
+            if(strlen(tempDid) != 5) {
+                printf("%s取件码位数错误!请重试...%s\n", COLOR_ERROR, COLOR_RESET);
+                break;
+            }else {
+                for(DELIVERY* tempDelivery = pListDelivery->head->next; 
+                            tempDelivery; tempDelivery = tempDelivery->next) {
+                    if(strcmp(tempDelivery->Did, tempDid) == 0) {
+                        printf("%s取件成功!请取走包裹.%s\n", COLOR_DISPLAY, COLOR_RESET);
+                        removeDelivery(pListDelivery, tempDid);
+                    }else {
+                        printf("%s暂无该包裹!请检查取件码后重试...%s\n", COLOR_ERROR, COLOR_RESET);
+                        break;
+                    }
+                }
+            }
+            break;
+
+        case 'x':
+            exitFirst(pListUser, pListDelivery, pListAdmin);
+            break;
+
+        default:
+            printf("%s输入错误!请重试...%s\n", COLOR_ERROR, COLOR_RESET);
+            break;
+        }
+    }
+}
+
+int signupAdmin(LIST_ADMIN* pList) {
+    ADMIN* newAdmin = (ADMIN*)malloc(sizeof(ADMIN));
+    char tempAdminName[MAX_NAME];// 用户名数组
+    char tempPassword[MAX_PASSWORD];// 密码数组
+    char istempPassword[MAX_PASSWORD];// 确认密码数组
+    int ispwRight = 0;// 确认密码，校验码是否成功
+    int nameLen = 0, passwordLen = 0;// 用户名长度，密码长度, 校验码长度
+    printf("%s\\== 欢迎来到管理员注册界面 ==/%s\n", COLOR_WELCOME, COLOR_RESET);
+    while(1) {// 用户名输入循环
+        printf("%s请输入您的新用户名:(最大支持10位)%s", COLOR_DISPLAY, COLOR_RESET);
+        scanf("%s",tempAdminName);
+        tempAdminName[MAX_NAME - 1] = '\0';
+        nameLen = strlen(tempAdminName);
+        if(nameLen > 10) {
+            printf("%s您输入的用户名过长!请重试...%s\n", COLOR_ERROR, COLOR_RESET);
+        }else {
+            for(ADMIN* tempNode = pList->head->next; tempNode; tempNode = tempNode->next) {
+                if(strcmp(tempNode->name, tempAdminName) == 0) {
+                    printf("%s您输入的用户名已被注册过!请重试...%s\n", COLOR_ERROR, COLOR_RESET);
+                    return 0;
+                }
+            }
+            strcpy(newAdmin->name, tempAdminName);
+            break;
+        }
+    }
+
+    while(1) {// 密码输入循环
+        printf("%s请输入您的新密码:(最大支持25位)%s", COLOR_DISPLAY, COLOR_RESET);
+        scanf("%s",tempPassword);
+        tempPassword[MAX_PASSWORD - 1] = '\0';
+        passwordLen = strlen(tempPassword);
+        if(passwordLen > 25) {
+            printf("%s您输入的密码过长!请重试...%s\n", COLOR_ERROR, COLOR_RESET);
+        }else {
+            while(1) {
+                printf("%s请确认您的新密码:%s", COLOR_DISPLAY, COLOR_RESET);
+                scanf("%s", istempPassword);
+                istempPassword[MAX_PASSWORD - 1] = '\0';
+                if(strcmp(tempPassword, istempPassword) == 0) {
+                    printf("%s密码确认成功!%s\n", COLOR_DISPLAY, COLOR_RESET);
+                    ispwRight = 1;
+                    break;
+                }else {
+                    printf("%s您重新输入的密码有误!请重试...%s\n", COLOR_ERROR, COLOR_RESET);
+                }
+            }
+            if(ispwRight) {
+                strcpy(newAdmin->password, tempPassword);
+                break;
+            }
+        }
+    }
+
+    addAdmin(pList, newAdmin);
+
+    return 1;
+}
+
+int aboutAdmin(LIST_ADMIN* pList) {
+    printf("%s\\== 欢迎进入管理员系统 ==/%s\n", COLOR_WELCOME, COLOR_RESET);
+    char button1;
+    while(1) {
+        printf("%s\\==%s%sq%s %s登录 ==/%s\n", COLOR_WELCOME, COLOR_RESET, COLOR_DISPLAY, COLOR_RESET, COLOR_WELCOME, COLOR_RESET);
+        printf("%s\\==%s%sw%s %s注册 ==/%s\n", COLOR_WELCOME, COLOR_RESET, COLOR_DISPLAY, COLOR_RESET, COLOR_WELCOME, COLOR_RESET);
+        printf("%s\\==%s%sx%s %s退出 ==/%s\n", COLOR_WELCOME, COLOR_RESET, COLOR_DISPLAY, COLOR_RESET, COLOR_WELCOME, COLOR_RESET);
+        printf("%s请选择您要进行的操作:%s", COLOR_DISPLAY, COLOR_RESET);
+        scanf(" %c", &button1);
+        button1 = handleButton1(button1);// 处理用户大小写问题
+
+        switch (button1)
+        {
+        case 'q':
+            if(signinAdmin(pList)) {
+                return 1;
+            }
+            break;
+        
+        case 'w':
+            if(signupAdmin(pList)) {
+                return 2;
+            }
+            break;
+            
+        case 'x':
+            return 0;
+            break;
+
+        default:
+            printf("%s输入错误!请重试...%s\n", COLOR_ERROR, COLOR_RESET);
+            break;
+        }
+    }
+}
+
+void adminMenu(LIST_DELIVERY* pListDelivery) {
+    printf("%s\\== 欢迎进入管理员系统 ==/%s\n", COLOR_WELCOME, COLOR_RESET);
+    DELIVERY* Node;
+    char tempDid[MAX_ONLYNUMBER];
+    int isRight = 0;
+    char button1;
+    while(1) {
+        printf("%s\\==%s%sq%s %s存件 ==/%s\n", COLOR_WELCOME, COLOR_RESET, COLOR_DISPLAY, COLOR_RESET, COLOR_WELCOME, COLOR_RESET);
+        printf("%s\\==%s%sx%s %s退出 ==/%s\n", COLOR_WELCOME, COLOR_RESET, COLOR_DISPLAY, COLOR_RESET, COLOR_WELCOME, COLOR_RESET);
+        printf("%s请选择您要进行的操作:%s", COLOR_DISPLAY, COLOR_RESET);
+        scanf(" %c", &button1);
+        button1 = handleButton1(button1);// 处理用户大小写问题
+        switch (button1)
+        {
+        case 'q':
+            Node = (DELIVERY*)malloc(sizeof(DELIVERY));
+            Node->prev = NULL;
+            Node->next = NULL;
+            while(1) {
+                printf("%s请输入5位取件码:%s", COLOR_DISPLAY, COLOR_RESET);
+                scanf("%s", tempDid);
+                tempDid[MAX_ONLYNUMBER - 1] = '\0';
+                if(strlen(tempDid) != 5) {
+                    printf("%s位数错误!请重试...%s\n", COLOR_ERROR, COLOR_RESET);
+                }else {
+                    isRight = 1;
+                    break;
+                }
+            }
+            if(isRight) {
+                strcpy(Node->Did, tempDid);
+                addDelivery(pListDelivery, Node);
+            }
+            break;
+
+        case 'x':
+            return;
+            break;
+
+        default:
+            printf("%s输入错误!请重试...%s\n", COLOR_ERROR, COLOR_RESET);
+            break;
+        }
+    }
+}
+
 /*
-    菜单界面。
+    欢迎菜单界面。
     先显示好提供用户可以进行的操作，
     之后在while循环内等待用户输入，
     保证用户输入错误之后，
@@ -354,7 +918,7 @@ char handleButton1(char button1) {
     通过switch确定要进入哪个函数。
 */
 
-void menu(LIST_DELIVERY* pListDelivery, LIST_USER* pListUser) {
+void firstMenu(LIST_DELIVERY* pListDelivery, LIST_USER* pListUser, LIST_ADMIN* pListAdmin) {
     printf("%s\\== 欢迎进入社区快递柜管理系统 ==/%s\n", COLOR_WELCOME, COLOR_RESET);
     char button1;
     while(1) {
@@ -363,6 +927,7 @@ void menu(LIST_DELIVERY* pListDelivery, LIST_USER* pListUser) {
         printf("%s\\==%s%se%s %s快速取件 ==/%s\n", COLOR_WELCOME, COLOR_RESET, COLOR_DISPLAY, COLOR_RESET, COLOR_WELCOME, COLOR_RESET);
         printf("%s\\==%s%sr%s %s使用说明 ==/%s\n", COLOR_WELCOME, COLOR_RESET, COLOR_DISPLAY, COLOR_RESET, COLOR_WELCOME, COLOR_RESET);
         printf("%s\\==%s%st%s %s关于我们 ==/%s\n", COLOR_WELCOME, COLOR_RESET, COLOR_DISPLAY, COLOR_RESET, COLOR_WELCOME, COLOR_RESET);
+        printf("%s\\==%s%su%s %s管理员相关 ==/%s\n", COLOR_WELCOME, COLOR_RESET, COLOR_DISPLAY, COLOR_RESET, COLOR_WELCOME, COLOR_RESET);
         printf("%s\\==%s%sx%s %s退出 ==/%s\n", COLOR_WELCOME, COLOR_RESET, COLOR_DISPLAY, COLOR_RESET, COLOR_WELCOME, COLOR_RESET);
         printf("%s请选择您要进行的操作:%s\n", COLOR_DISPLAY, COLOR_RESET);
         scanf(" %c", &button1);
@@ -370,7 +935,10 @@ void menu(LIST_DELIVERY* pListDelivery, LIST_USER* pListUser) {
         switch (button1)
         {
         case 'q':
-            signin();
+            if(signin(pListUser)) {
+                userMenu(pListDelivery, pListUser, pListAdmin);
+            }
+            
             break;
 
         case 'w':
@@ -389,8 +957,24 @@ void menu(LIST_DELIVERY* pListDelivery, LIST_USER* pListUser) {
             aboutUs();
             break;
 
+        case 'u':
+            int statusAdmin = aboutAdmin(pListAdmin);
+            switch (statusAdmin)
+            {
+            case 1:
+                adminMenu(pListDelivery);
+                break;
+            
+            case 2:
+                break;
+
+            default:
+                break;
+            }
+            continue;
+
         case 'x':
-            exitFirst();
+            exitFirst(pListUser, pListDelivery, pListAdmin);
             break;
 
         default:
