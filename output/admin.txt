@@ -1,2 +1,3 @@
-FRiver|Jiayang012
-nihao|nihao
+admin1|admin1
+admin2|admiin2
+admin3|admin3
