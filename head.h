@@ -1,5 +1,6 @@
+#ifndef HEAD_H
+#define HEAD_H
 
-#ifndef HEAD
 #include <stdio.h>
 #include <unistd.h>
 #include <stdlib.h>
@@ -47,18 +48,50 @@ typedef struct {// 用户链表
     USER* head;// 头节点
 }LIST_USER;
 
-typedef struct {// 用户链表
+typedef struct {// 管理员链表
     ADMIN* head;// 头节点
 }LIST_ADMIN;
 
-typedef struct {// 用户链表
+typedef struct {// 快递链表
     DELIVERY* head;// 头节点
 }LIST_DELIVERY;
+
+// 统计相关结构体
+typedef struct {// 快递统计结构体
+    int totalDeliveries;        // 总快递数
+    int pickedDeliveries;       // 已取件数
+    int waitingDeliveries;      // 待取件数
+    int totalUsers;             // 总用户数
+    int registeredUsers;        // 注册用户数
+    int adminCount;             // 管理员数量
+    double pickRate;            // 取件率
+    time_t oldestDelivery;      // 最早未取快递时间
+    time_t newestDelivery;      // 最新快递时间
+    char mostActiveUser[MAX_NAME];  // 快递最多的用户
+    int mostActiveUserCount;    // 该用户的快递数
+}STATISTICS;
+
+typedef struct {// 用户快递统计结构体
+    char userName[MAX_NAME];
+    char userON[MAX_ONLYNUMBER];
+    int deliveryCount;
+    int pickedCount;
+    int waitingCount;
+    time_t lastDeliveryTime;
+}USER_DELIVERY_STAT;
+
+typedef struct {// 时间统计结构体
+    int lastHour;       // 最近1小时
+    int lastDay;        // 最近24小时
+    int lastWeek;       // 最近7天
+    int lastMonth;      // 最近30天
+    int older;          // 更早的
+}TIME_STAT;
 
 void firstShow();// 欢迎界面(1)
 void firstMenu(LIST_DELIVERY* pListDelivery, LIST_USER* pListUser, LIST_ADMIN* pListAdmin);// 欢迎菜单显示(1)
 void userMenu(LIST_DELIVERY* pListDelivery, LIST_USER* pListUser, LIST_ADMIN* pListAdmin, USER* currentUser);// 用户菜单显示(1)
-void adminMenu(LIST_DELIVERY* pListDelivery, LIST_USER* pListUser);// 管理员菜单显示(1)
+void adminMenu(LIST_DELIVERY* pListDelivery, LIST_USER* pListUser, LIST_ADMIN* pListAdmin);// 管理员菜单显示(1)
 int signin(LIST_USER* pList, USER** currentUser);// 登录(1)
 void signup(LIST_USER* pList);// 注册(1)
 void quickGet(LIST_DELIVERY* pListDelivery, LIST_USER* pListUser);// 快速取件(1)
@@ -94,4 +127,17 @@ void initAdmin(LIST_ADMIN* pList);// 初始化链表(1)
 ADMIN* createAdminNode(char* userName, char* passWord);// 创建管理员节点(1)
 void addAdmin(LIST_ADMIN* pList, ADMIN* Node);// 增加管理员节点(1)
 void deleteAdmin(LIST_ADMIN* pList);// 删除管理员节点(1)
+
+// 统计相关函数
+void collectStatistics(LIST_DELIVERY* pListDelivery, LIST_USER* pListUser, 
+                       LIST_ADMIN* pListAdmin, STATISTICS* stats, TIME_STAT* timeStat);// 收集统计数据(1)
+void simpleStatistics(LIST_DELIVERY* pListDelivery, LIST_USER* pListUser, 
+                     LIST_ADMIN* pListAdmin);// 简单统计(1)
+void comprehensiveStatistics(LIST_DELIVERY* pListDelivery, LIST_USER* pListUser, 
+                            LIST_ADMIN* pListAdmin);// 综合统计(1)
+void exportStatisticsToFile(LIST_DELIVERY* pListDelivery, LIST_USER* pListUser, 
+                           LIST_ADMIN* pListAdmin);// 导出统计报表(1)
+void printStatisticsReport(STATISTICS* stats, TIME_STAT* timeStat, 
+                          USER_DELIVERY_STAT* topUsers, int topUserCount);// 打印统计报表(1)
+
 #endif

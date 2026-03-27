@@ -291,17 +291,12 @@ void initUser(LIST_USER* pList) {
         USER* Node = createUserNode(userName, passWord, onlyNumber, isSignup);
         
         // 插入链表尾部
-        if (pList->head->next == NULL) {
-            pList->head->next = Node;
-            Node->prev = pList->head;
-        } else {
-            USER* tempNode = pList->head;
-            while (tempNode->next != NULL) {
-                tempNode = tempNode->next;
-            }
-            tempNode->next = Node;
-            Node->prev = tempNode;
+        USER* tail = pList->head;
+        while (tail->next != NULL) {
+            tail = tail->next;
         }
+        tail->next = Node;
+        Node->prev = tail;
     }
     fclose(fd);
 }
@@ -374,17 +369,12 @@ void initDelivery(LIST_DELIVERY* pList) {
         DELIVERY* Node = createDeliveryNode(Did, userON, userName, status);
         
         // 插入链表尾部
-        if (pList->head->next == NULL) {
-            pList->head->next = Node;
-            Node->prev = pList->head;
-        } else {
-            DELIVERY* tempNode = pList->head;
-            while (tempNode->next != NULL) {
-                tempNode = tempNode->next;
-            }
-            tempNode->next = Node;
-            Node->prev = tempNode;
+        DELIVERY* tail = pList->head;
+        while (tail->next != NULL) {
+            tail = tail->next;
         }
+        tail->next = Node;
+        Node->prev = tail;
     }
     fclose(fd);
 }
@@ -772,7 +762,8 @@ int getDeliveryCountByUser(LIST_DELIVERY* pList, char* userON) {
 
 /*
     用来按添加时间对快递进行排序。
-    使用冒泡排序算法，按时间从小到大排序。
+    使用冒泡排序算法，交换节点位置而非数据。
+    按时间从小到大排序。
 */
 
 void sortDeliveriesByTime(LIST_DELIVERY* pList) {
@@ -788,31 +779,28 @@ void sortDeliveriesByTime(LIST_DELIVERY* pList) {
         
         while(ptr1->next != lptr) {
             if(ptr1->addTime > ptr1->next->addTime) {
-                // 交换两个节点的数据
-                char tempDid[MAX_ONLYNUMBER];
-                char tempUserON[MAX_ONLYNUMBER];
-                char tempUserName[MAX_NAME];
-                int tempStatus;
-                time_t tempTime;
+                // 交换相邻的两个节点
+                DELIVERY* node1 = ptr1;
+                DELIVERY* node2 = ptr1->next;
+                DELIVERY* node1_prev = node1->prev;
+                DELIVERY* node2_next = node2->next;
                 
-                strcpy(tempDid, ptr1->Did);
-                strcpy(tempUserON, ptr1->userON);
-                strcpy(tempUserName, ptr1->userName);
-                tempStatus = ptr1->status;
-                tempTime = ptr1->addTime;
+                // 调整 node1 和 node2 的 prev 和 next
+                node1->next = node2_next;
+                node1->prev = node2;
+                node2->next = node1;
+                node2->prev = node1_prev;
                 
-                strcpy(ptr1->Did, ptr1->next->Did);
-                strcpy(ptr1->userON, ptr1->next->userON);
-                strcpy(ptr1->userName, ptr1->next->userName);
-                ptr1->status = ptr1->next->status;
-                ptr1->addTime = ptr1->next->addTime;
+                // 调整前后节点的指针
+                if(node1_prev != NULL) {
+                    node1_prev->next = node2;
+                }
+                if(node2_next != NULL) {
+                    node2_next->prev = node1;
+                }
                 
-                strcpy(ptr1->next->Did, tempDid);
-                strcpy(ptr1->next->userON, tempUserON);
-                strcpy(ptr1->next->userName, tempUserName);
-                ptr1->next->status = tempStatus;
-                ptr1->next->addTime = tempTime;
-                
+                // 更新 ptr1 继续遍历
+                ptr1 = node2;
                 swapped = 1;
             }
             ptr1 = ptr1->next;
@@ -823,7 +811,8 @@ void sortDeliveriesByTime(LIST_DELIVERY* pList) {
 
 /*
     用来按取件码对快递进行排序。
-    使用冒泡排序算法，按取件码字典序从小到大排序。
+    使用冒泡排序算法，交换节点位置而非数据。
+    按取件码字典序从小到大排序。
 */
 
 void sortDeliveriesByCode(LIST_DELIVERY* pList) {
@@ -839,31 +828,28 @@ void sortDeliveriesByCode(LIST_DELIVERY* pList) {
         
         while(ptr1->next != lptr) {
             if(strcmp(ptr1->Did, ptr1->next->Did) > 0) {
-                // 交换两个节点的数据
-                char tempDid[MAX_ONLYNUMBER];
-                char tempUserON[MAX_ONLYNUMBER];
-                char tempUserName[MAX_NAME];
-                int tempStatus;
-                time_t tempTime;
+                // 交换相邻的两个节点
+                DELIVERY* node1 = ptr1;
+                DELIVERY* node2 = ptr1->next;
+                DELIVERY* node1_prev = node1->prev;
+                DELIVERY* node2_next = node2->next;
                 
-                strcpy(tempDid, ptr1->Did);
-                strcpy(tempUserON, ptr1->userON);
-                strcpy(tempUserName, ptr1->userName);
-                tempStatus = ptr1->status;
-                tempTime = ptr1->addTime;
+                // 调整 node1 和 node2 的 prev 和 next
+                node1->next = node2_next;
+                node1->prev = node2;
+                node2->next = node1;
+                node2->prev = node1_prev;
                 
-                strcpy(ptr1->Did, ptr1->next->Did);
-                strcpy(ptr1->userON, ptr1->next->userON);
-                strcpy(ptr1->userName, ptr1->next->userName);
-                ptr1->status = ptr1->next->status;
-                ptr1->addTime = ptr1->next->addTime;
+                // 调整前后节点的指针
+                if(node1_prev != NULL) {
+                    node1_prev->next = node2;
+                }
+                if(node2_next != NULL) {
+                    node2_next->prev = node1;
+                }
                 
-                strcpy(ptr1->next->Did, tempDid);
-                strcpy(ptr1->next->userON, tempUserON);
-                strcpy(ptr1->next->userName, tempUserName);
-                ptr1->next->status = tempStatus;
-                ptr1->next->addTime = tempTime;
-                
+                // 更新 ptr1 继续遍历
+                ptr1 = node2;
                 swapped = 1;
             }
             ptr1 = ptr1->next;
@@ -1094,12 +1080,413 @@ int aboutAdmin(LIST_ADMIN* pList) {
 }
 
 /*
+    收集统计数据函数。
+    遍历所有链表，收集各种统计信息。
+*/
+
+void collectStatistics(LIST_DELIVERY* pListDelivery, LIST_USER* pListUser, 
+                       LIST_ADMIN* pListAdmin, STATISTICS* stats, TIME_STAT* timeStat) {
+    // 初始化统计结构体
+    memset(stats, 0, sizeof(STATISTICS));
+    memset(timeStat, 0, sizeof(TIME_STAT));
+    stats->oldestDelivery = time(NULL);
+    
+    // 创建用户快递统计数组
+    USER_DELIVERY_STAT* userStats = NULL;
+    int userStatCount = 0;
+    
+    // 统计用户
+    for(USER* tempUser = pListUser->head->next; tempUser; tempUser = tempUser->next) {
+        stats->totalUsers++;
+        if(tempUser->issignup == 1) {
+            stats->registeredUsers++;
+        }
+        
+        // 扩展用户统计数组
+        userStatCount++;
+        userStats = (USER_DELIVERY_STAT*)realloc(userStats, userStatCount * sizeof(USER_DELIVERY_STAT));
+        strcpy(userStats[userStatCount-1].userName, tempUser->name);
+        strcpy(userStats[userStatCount-1].userON, tempUser->onlyNumber);
+        userStats[userStatCount-1].deliveryCount = 0;
+        userStats[userStatCount-1].pickedCount = 0;
+        userStats[userStatCount-1].waitingCount = 0;
+        userStats[userStatCount-1].lastDeliveryTime = 0;
+    }
+    
+    // 统计管理员
+    for(ADMIN* tempAdmin = pListAdmin->head->next; tempAdmin; tempAdmin = tempAdmin->next) {
+        stats->adminCount++;
+    }
+    
+    // 获取当前时间用于时间统计
+    time_t now = time(NULL);
+    time_t oneHourAgo = now - 3600;
+    time_t oneDayAgo = now - 86400;
+    time_t oneWeekAgo = now - 604800;
+    time_t oneMonthAgo = now - 2592000;
+    
+    // 统计快递
+    for(DELIVERY* tempDelivery = pListDelivery->head->next; tempDelivery; 
+        tempDelivery = tempDelivery->next) {
+        stats->totalDeliveries++;
+        
+        if(tempDelivery->status == 1) {
+            stats->pickedDeliveries++;
+        } else {
+            stats->waitingDeliveries++;
+            
+            // 更新最早未取快递时间
+            if(tempDelivery->addTime < stats->oldestDelivery) {
+                stats->oldestDelivery = tempDelivery->addTime;
+            }
+            
+            // 时间分布统计
+            if(tempDelivery->addTime >= oneHourAgo) {
+                timeStat->lastHour++;
+            } else if(tempDelivery->addTime >= oneDayAgo) {
+                timeStat->lastDay++;
+            } else if(tempDelivery->addTime >= oneWeekAgo) {
+                timeStat->lastWeek++;
+            } else if(tempDelivery->addTime >= oneMonthAgo) {
+                timeStat->lastMonth++;
+            } else {
+                timeStat->older++;
+            }
+        }
+        
+        // 更新最新快递时间
+        if(tempDelivery->addTime > stats->newestDelivery) {
+            stats->newestDelivery = tempDelivery->addTime;
+        }
+        
+        // 统计每个用户的快递
+        for(int i = 0; i < userStatCount; i++) {
+            if(strcmp(userStats[i].userON, tempDelivery->userON) == 0) {
+                userStats[i].deliveryCount++;
+                if(tempDelivery->status == 1) {
+                    userStats[i].pickedCount++;
+                } else {
+                    userStats[i].waitingCount++;
+                }
+                if(tempDelivery->addTime > userStats[i].lastDeliveryTime) {
+                    userStats[i].lastDeliveryTime = tempDelivery->addTime;
+                }
+                break;
+            }
+        }
+    }
+    
+    // 计算取件率
+    if(stats->totalDeliveries > 0) {
+        stats->pickRate = (double)stats->pickedDeliveries / stats->totalDeliveries * 100;
+    }
+    
+    // 查找快递最多的用户
+    stats->mostActiveUserCount = 0;
+    for(int i = 0; i < userStatCount; i++) {
+        if(userStats[i].deliveryCount > stats->mostActiveUserCount) {
+            stats->mostActiveUserCount = userStats[i].deliveryCount;
+            strcpy(stats->mostActiveUser, userStats[i].userName);
+        }
+    }
+    
+    free(userStats);
+}
+
+/*
+    打印统计报表函数。
+    生成格式化的统计报表。
+*/
+
+void printStatisticsReport(STATISTICS* stats, TIME_STAT* timeStat, 
+                          USER_DELIVERY_STAT* topUsers, int topUserCount) {
+    printf("\n%s╔══════════════════════════════════════════════════════════════╗%s\n", 
+           COLOR_WELCOME, COLOR_RESET);
+    printf("%s║                   社区快递柜管理系统统计报表                    ║%s\n", 
+           COLOR_WELCOME, COLOR_RESET);
+    printf("%s╠══════════════════════════════════════════════════════════════╣%s\n", 
+           COLOR_WELCOME, COLOR_RESET);
+    
+    // 快递总体情况
+    printf("%s║ 快递统计                                    ║%s\n", 
+           COLOR_DISPLAY, COLOR_RESET);
+    printf("%s║   总快递数: %-36d ║%s\n", 
+           COLOR_DISPLAY, stats->totalDeliveries, COLOR_RESET);
+    printf("%s║   已取件数: %-36d ║%s\n", 
+           COLOR_DISPLAY, stats->pickedDeliveries, COLOR_RESET);
+    printf("%s║   待取件数: %-36d ║%s\n", 
+           COLOR_DISPLAY, stats->waitingDeliveries, COLOR_RESET);
+    printf("%s║   取件率: %-36.2f%% ║%s\n", 
+           COLOR_DISPLAY, stats->pickRate, COLOR_RESET);
+    
+    // 时间分布统计
+    printf("%s╠══════════════════════════════════════════════════════════════╣%s\n", 
+           COLOR_DISPLAY, COLOR_RESET);
+    printf("%s║ 快递时间分布                                ║%s\n", 
+           COLOR_DISPLAY, COLOR_RESET);
+    printf("%s║   最近1小时: %-34d ║%s\n", 
+           COLOR_DISPLAY, timeStat->lastHour, COLOR_RESET);
+    printf("%s║   最近24小时: %-33d ║%s\n", 
+           COLOR_DISPLAY, timeStat->lastDay, COLOR_RESET);
+    printf("%s║   最近7天: %-36d ║%s\n", 
+           COLOR_DISPLAY, timeStat->lastWeek, COLOR_RESET);
+    printf("%s║   最近30天: %-35d ║%s\n", 
+           COLOR_DISPLAY, timeStat->lastMonth, COLOR_RESET);
+    printf("%s║   30天以上: %-35d ║%s\n", 
+           COLOR_DISPLAY, timeStat->older, COLOR_RESET);
+    
+    // 用户统计
+    printf("%s╠══════════════════════════════════════════════════════════════╣%s\n", 
+           COLOR_DISPLAY, COLOR_RESET);
+    printf("%s║ 用户统计                                    ║%s\n", 
+           COLOR_DISPLAY, COLOR_RESET);
+    printf("%s║   总用户数: %-36d ║%s\n", 
+           COLOR_DISPLAY, stats->totalUsers, COLOR_RESET);
+    printf("%s║   注册用户数: %-34d ║%s\n", 
+           COLOR_DISPLAY, stats->registeredUsers, COLOR_RESET);
+    printf("%s║   管理员数: %-36d ║%s\n", 
+           COLOR_DISPLAY, stats->adminCount, COLOR_RESET);
+    
+    // 最活跃用户
+    if(topUserCount > 0) {
+        printf("%s╠══════════════════════════════════════════════════════════════╣%s\n", 
+               COLOR_DISPLAY, COLOR_RESET);
+        printf("%s║ 快递最多的用户(TOP %d)                         ║%s\n", 
+               COLOR_DISPLAY, topUserCount > 3 ? 3 : topUserCount, COLOR_RESET);
+        for(int i = 0; i < (topUserCount > 3 ? 3 : topUserCount); i++) {
+            printf("%s║   %d. %-10s (校验码:%-6s) 快递数:%-4d ║%s\n", 
+                   COLOR_DISPLAY, i+1, topUsers[i].userName, 
+                   topUsers[i].userON, topUsers[i].deliveryCount, COLOR_RESET);
+        }
+    }
+    
+    // 最早未取快递提示
+    if(stats->oldestDelivery > 0 && stats->oldestDelivery < time(NULL)) {
+        struct tm* t = localtime(&stats->oldestDelivery);
+        printf("%s╠══════════════════════════════════════════════════════════════╣%s\n", 
+               COLOR_DISPLAY, COLOR_RESET);
+        printf("%s║ 最早未取快递时间: %04d-%02d-%02d %02d:%02d:%02d        ║%s\n", 
+               COLOR_DISPLAY, t->tm_year + 1900, t->tm_mon + 1, t->tm_mday,
+               t->tm_hour, t->tm_min, t->tm_sec, COLOR_RESET);
+    }
+    
+    printf("%s╚══════════════════════════════════════════════════════════════╝%s\n", 
+           COLOR_WELCOME, COLOR_RESET);
+}
+
+/*
+    简单统计功能函数。
+    快速显示核心统计数据。
+*/
+
+void simpleStatistics(LIST_DELIVERY* pListDelivery, LIST_USER* pListUser, 
+                     LIST_ADMIN* pListAdmin) {
+    STATISTICS stats;
+    TIME_STAT timeStat;
+    
+    collectStatistics(pListDelivery, pListUser, pListAdmin, &stats, &timeStat);
+    
+    printf("\n%s╔══════════════════════════════════════════════════════════════╗%s\n", 
+           COLOR_WELCOME, COLOR_RESET);
+    printf("%s║                      简单统计信息                              ║%s\n", 
+           COLOR_WELCOME, COLOR_RESET);
+    printf("%s╠══════════════════════════════════════════════════════════════╣%s\n", 
+           COLOR_WELCOME, COLOR_RESET);
+    printf("%s║   总快递数: %-6d | 待取件数: %-6d | 取件率: %-6.2f%% ║%s\n", 
+           COLOR_DISPLAY, stats.totalDeliveries, stats.waitingDeliveries, 
+           stats.pickRate, COLOR_RESET);
+    printf("%s║   总用户数: %-6d | 注册用户: %-6d | 管理员数: %-6d ║%s\n", 
+           COLOR_DISPLAY, stats.totalUsers, stats.registeredUsers, 
+           stats.adminCount, COLOR_RESET);
+    printf("%s║   最活跃用户: %-10s | 快递数: %-6d                ║%s\n", 
+           COLOR_DISPLAY, stats.mostActiveUser, stats.mostActiveUserCount, 
+           COLOR_RESET);
+    printf("%s╚══════════════════════════════════════════════════════════════╝%s\n", 
+           COLOR_WELCOME, COLOR_RESET);
+}
+
+/*
+    综合统计功能函数。
+    显示详细统计信息，包括时间分布和用户排名。
+*/
+
+void comprehensiveStatistics(LIST_DELIVERY* pListDelivery, LIST_USER* pListUser, 
+                            LIST_ADMIN* pListAdmin) {
+    STATISTICS stats;
+    TIME_STAT timeStat;
+    USER_DELIVERY_STAT* userStats = NULL;
+    int userStatCount = 0;
+    
+    // 收集统计数据
+    collectStatistics(pListDelivery, pListUser, pListAdmin, &stats, &timeStat);
+    
+    // 重新收集用户快递统计用于排名
+    userStatCount = 0;
+    for(USER* tempUser = pListUser->head->next; tempUser; tempUser = tempUser->next) {
+        userStatCount++;
+        userStats = (USER_DELIVERY_STAT*)realloc(userStats, userStatCount * sizeof(USER_DELIVERY_STAT));
+        strcpy(userStats[userStatCount-1].userName, tempUser->name);
+        strcpy(userStats[userStatCount-1].userON, tempUser->onlyNumber);
+        userStats[userStatCount-1].deliveryCount = 0;
+        userStats[userStatCount-1].pickedCount = 0;
+        userStats[userStatCount-1].waitingCount = 0;
+        userStats[userStatCount-1].lastDeliveryTime = 0;
+    }
+    
+    // 统计快递
+    for(DELIVERY* tempDelivery = pListDelivery->head->next; tempDelivery; 
+        tempDelivery = tempDelivery->next) {
+        for(int i = 0; i < userStatCount; i++) {
+            if(strcmp(userStats[i].userON, tempDelivery->userON) == 0) {
+                userStats[i].deliveryCount++;
+                if(tempDelivery->status == 1) {
+                    userStats[i].pickedCount++;
+                } else {
+                    userStats[i].waitingCount++;
+                }
+                if(tempDelivery->addTime > userStats[i].lastDeliveryTime) {
+                    userStats[i].lastDeliveryTime = tempDelivery->addTime;
+                }
+                break;
+            }
+        }
+    }
+    
+    // 对用户按快递数量排序（冒泡排序）
+    for(int i = 0; i < userStatCount - 1; i++) {
+        for(int j = 0; j < userStatCount - i - 1; j++) {
+            if(userStats[j].deliveryCount < userStats[j+1].deliveryCount) {
+                USER_DELIVERY_STAT temp = userStats[j];
+                userStats[j] = userStats[j+1];
+                userStats[j+1] = temp;
+            }
+        }
+    }
+    
+    // 生成完整报表
+    printStatisticsReport(&stats, &timeStat, userStats, userStatCount);
+    
+    free(userStats);
+}
+
+/*
+    导出统计报表到文件函数。
+    将统计信息保存到statistics.txt文件中。
+*/
+
+void exportStatisticsToFile(LIST_DELIVERY* pListDelivery, LIST_USER* pListUser, 
+                           LIST_ADMIN* pListAdmin) {
+    FILE* fd = fopen("statistics.txt", "w");
+    if(fd == NULL) {
+        printf("%s无法创建统计文件!%s\n", COLOR_ERROR, COLOR_RESET);
+        return;
+    }
+    
+    STATISTICS stats;
+    TIME_STAT timeStat;
+    USER_DELIVERY_STAT* userStats = NULL;
+    int userStatCount = 0;
+    time_t now = time(NULL);
+    
+    // 收集统计数据
+    collectStatistics(pListDelivery, pListUser, pListAdmin, &stats, &timeStat);
+    
+    // 重新收集用户统计用于排名
+    userStatCount = 0;
+    for(USER* tempUser = pListUser->head->next; tempUser; tempUser = tempUser->next) {
+        userStatCount++;
+        userStats = (USER_DELIVERY_STAT*)realloc(userStats, userStatCount * sizeof(USER_DELIVERY_STAT));
+        strcpy(userStats[userStatCount-1].userName, tempUser->name);
+        strcpy(userStats[userStatCount-1].userON, tempUser->onlyNumber);
+        userStats[userStatCount-1].deliveryCount = 0;
+        userStats[userStatCount-1].pickedCount = 0;
+        userStats[userStatCount-1].waitingCount = 0;
+        userStats[userStatCount-1].lastDeliveryTime = 0;
+    }
+    
+    // 统计快递
+    for(DELIVERY* tempDelivery = pListDelivery->head->next; tempDelivery; 
+        tempDelivery = tempDelivery->next) {
+        for(int i = 0; i < userStatCount; i++) {
+            if(strcmp(userStats[i].userON, tempDelivery->userON) == 0) {
+                userStats[i].deliveryCount++;
+                if(tempDelivery->status == 1) {
+                    userStats[i].pickedCount++;
+                } else {
+                    userStats[i].waitingCount++;
+                }
+                if(tempDelivery->addTime > userStats[i].lastDeliveryTime) {
+                    userStats[i].lastDeliveryTime = tempDelivery->addTime;
+                }
+                break;
+            }
+        }
+    }
+    
+    // 排序用户
+    for(int i = 0; i < userStatCount - 1; i++) {
+        for(int j = 0; j < userStatCount - i - 1; j++) {
+            if(userStats[j].deliveryCount < userStats[j+1].deliveryCount) {
+                USER_DELIVERY_STAT temp = userStats[j];
+                userStats[j] = userStats[j+1];
+                userStats[j+1] = temp;
+            }
+        }
+    }
+    
+    // 写入文件
+    fprintf(fd, "社区快递柜管理系统统计报表\n");
+    fprintf(fd, "生成时间: %s", ctime(&now));
+    fprintf(fd, "========================================\n\n");
+    
+    fprintf(fd, "一、快递统计\n");
+    fprintf(fd, "   总快递数: %d\n", stats.totalDeliveries);
+    fprintf(fd, "   已取件数: %d\n", stats.pickedDeliveries);
+    fprintf(fd, "   待取件数: %d\n", stats.waitingDeliveries);
+    fprintf(fd, "   取件率: %.2f%%\n\n", stats.pickRate);
+    
+    fprintf(fd, "二、快递时间分布\n");
+    fprintf(fd, "   最近1小时: %d\n", timeStat.lastHour);
+    fprintf(fd, "   最近24小时: %d\n", timeStat.lastDay);
+    fprintf(fd, "   最近7天: %d\n", timeStat.lastWeek);
+    fprintf(fd, "   最近30天: %d\n", timeStat.lastMonth);
+    fprintf(fd, "   30天以上: %d\n\n", timeStat.older);
+    
+    fprintf(fd, "三、用户统计\n");
+    fprintf(fd, "   总用户数: %d\n", stats.totalUsers);
+    fprintf(fd, "   注册用户数: %d\n", stats.registeredUsers);
+    fprintf(fd, "   管理员数: %d\n\n", stats.adminCount);
+    
+    fprintf(fd, "四、用户快递排行榜\n");
+    for(int i = 0; i < (userStatCount > 10 ? 10 : userStatCount); i++) {
+        fprintf(fd, "   %d. %-10s (校验码:%-6s) 总快递:%-3d 待取:%-3d\n", 
+                i+1, userStats[i].userName, userStats[i].userON,
+                userStats[i].deliveryCount, userStats[i].waitingCount);
+    }
+    
+    if(stats.oldestDelivery > 0 && stats.oldestDelivery < now) {
+        struct tm* t = localtime(&stats.oldestDelivery);
+        fprintf(fd, "\n五、其他信息\n");
+        fprintf(fd, "   最早未取快递时间: %04d-%02d-%02d %02d:%02d:%02d\n",
+                t->tm_year + 1900, t->tm_mon + 1, t->tm_mday,
+                t->tm_hour, t->tm_min, t->tm_sec);
+        fprintf(fd, "   最活跃用户: %s (快递数: %d)\n", 
+                stats.mostActiveUser, stats.mostActiveUserCount);
+    }
+    
+    fclose(fd);
+    free(userStats);
+    
+    printf("%s统计报表已导出到 statistics.txt 文件!%s\n", COLOR_DISPLAY, COLOR_RESET);
+}
+
+/*
     管理员菜单界面。
-    提供存件、查看所有快递和退出功能。
+    提供存件、查看所有快递、统计和退出功能。
     存件时需要输入取件码和收件人用户名。
 */
 
-void adminMenu(LIST_DELIVERY* pListDelivery, LIST_USER* pListUser) {
+void adminMenu(LIST_DELIVERY* pListDelivery, LIST_USER* pListUser, LIST_ADMIN* pListAdmin) {
     printf("%s\\== 欢迎进入管理员系统 ==/%s\n", COLOR_WELCOME, COLOR_RESET);
     DELIVERY* Node;
     char tempDid[MAX_ONLYNUMBER];
@@ -1111,6 +1498,9 @@ void adminMenu(LIST_DELIVERY* pListDelivery, LIST_USER* pListUser) {
     while(1) {
         printf("%s\\==%s%sq%s %s存件 ==/%s\n", COLOR_WELCOME, COLOR_RESET, COLOR_DISPLAY, COLOR_RESET, COLOR_WELCOME, COLOR_RESET);
         printf("%s\\==%s%sv%s %s查看所有快递 ==/%s\n", COLOR_WELCOME, COLOR_RESET, COLOR_DISPLAY, COLOR_RESET, COLOR_WELCOME, COLOR_RESET);
+        printf("%s\\==%s%ss%s %s简单统计 ==/%s\n", COLOR_WELCOME, COLOR_RESET, COLOR_DISPLAY, COLOR_RESET, COLOR_WELCOME, COLOR_RESET);
+        printf("%s\\==%s%sc%s %s综合统计 ==/%s\n", COLOR_WELCOME, COLOR_RESET, COLOR_DISPLAY, COLOR_RESET, COLOR_WELCOME, COLOR_RESET);
+        printf("%s\\==%s%se%s %s导出报表 ==/%s\n", COLOR_WELCOME, COLOR_RESET, COLOR_DISPLAY, COLOR_RESET, COLOR_WELCOME, COLOR_RESET);
         printf("%s\\==%s%sx%s %s退出 ==/%s\n", COLOR_WELCOME, COLOR_RESET, COLOR_DISPLAY, COLOR_RESET, COLOR_WELCOME, COLOR_RESET);
         printf("%s请选择您要进行的操作:%s", COLOR_DISPLAY, COLOR_RESET);
         scanf(" %c", &button1);
@@ -1187,6 +1577,27 @@ void adminMenu(LIST_DELIVERY* pListDelivery, LIST_USER* pListUser) {
                 }
                 break;
                 
+            case 's':// 简单统计
+                simpleStatistics(pListDelivery, pListUser, pListAdmin);
+                printf("\n%s按任意键返回...%s", COLOR_DISPLAY, COLOR_RESET);
+                getchar();
+                getchar();
+                break;
+                
+            case 'c':// 综合统计
+                comprehensiveStatistics(pListDelivery, pListUser, pListAdmin);
+                printf("\n%s按任意键返回...%s", COLOR_DISPLAY, COLOR_RESET);
+                getchar();
+                getchar();
+                break;
+                
+            case 'e':// 导出报表
+                exportStatisticsToFile(pListDelivery, pListUser, pListAdmin);
+                printf("\n%s按任意键返回...%s", COLOR_DISPLAY, COLOR_RESET);
+                getchar();
+                getchar();
+                break;
+                
             case 'x':// 退出
                 return;
                 break;
@@ -1246,7 +1657,7 @@ void firstMenu(LIST_DELIVERY* pListDelivery, LIST_USER* pListUser, LIST_ADMIN* p
                 int statusAdmin = aboutAdmin(pListAdmin);
                 switch (statusAdmin) {
                     case 1:
-                        adminMenu(pListDelivery, pListUser);
+                        adminMenu(pListDelivery, pListUser, pListAdmin);
                         break;
                     case 2:
                         break;
